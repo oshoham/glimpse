@@ -10,7 +10,7 @@ void ofApp::setup(){
     // (ie, COM4 on a pc, /dev/tty.... on linux, /dev/tty... on a mac)
     // arduino users check in arduino app....
     int baud = 9600;
-    serial.setup("/dev/cu.usbmodem1421", baud);
+    serial.setup("/dev/tty.usbmodem1421", baud);
 
     serialString = "";
 //    
@@ -21,24 +21,29 @@ void ofApp::setup(){
 //        boxes.push_back(box);
 //        colors.push_back(ofColor::fromHsb(ofRandom(0, 255), ofRandom(0, 255), ofRandom(0, 255)));
 //    }
+    firstContact = false;
+    serial.flush();
+    establishSerialContact();
 }
 
 //--------------------------------------------------------------
 void ofApp::update(){
-    serialString = "";
-    serialString = ofxGetSerialString(serial,'\n'); //read until end of line
-    if (serialString.length() > 0) {
-        readTime = ofGetElapsedTimef();
-        
-        regex re("X: (.*)\tY: (.*)\tZ: (.*)");
-        smatch match;
-        if (regex_match(serialString, match, re) && match.size() > 1) {
-            x = stof(match.str(1));
-            y = stof(match.str(2));
-            z = stof(match.str(3));
-            cout << "x: " << match.str(1) << ", y: " << match.str(2) << ", z: " << match.str(3) << endl;
-        }
-    }
+//    serialString = "";
+//    serialString = ofxGetSerialString(serial,'\n'); //read until end of line
+//    if (serialString.length() > 0) {
+//        readTime = ofGetElapsedTimef();
+//        
+//        regex re("X: (.*)\tY: (.*)\tZ: (.*)");
+//        smatch match;
+//        if (regex_match(serialString, match, re) && match.size() > 1) {
+//            x = stof(match.str(1));
+//            y = stof(match.str(2));
+//            z = stof(match.str(3));
+//            cout << "x: " << match.str(1) << ", y: " << match.str(2) << ", z: " << match.str(3) << endl;
+//        }
+//    }
+    
+    readOrientationPacketWithHandshake();
 }
 
 //--------------------------------------------------------------
@@ -64,11 +69,73 @@ void ofApp::draw(){
 //    
 //    camera.end();
 
-    int h = ofMap(x, 0, 360, 0, 255);
-    int b = ofMap(y, -80, 80, 0, 255);
-    int s = ofMap(z, -180, 180, 0, 255);
-    ofColor color = ofColor::fromHsb(h, s, b);
+    int r = ofMap(x, 0, 360, 0, 255);
+    int g = ofMap(y, -80, 80, 0, 255);
+    int b = ofMap(z, -180, 180, 0, 255);
+    ofColor color(r, g, b);
     ofBackground(color);
+}
+
+void ofApp::establishSerialContact() {
+    serial.flush();
+    while (serial.available() <= 0) {
+        cout << "writing contact byte..." << endl;
+        serial.writeByte(FIRST_CONTACT_BYTE);
+        ofSleepMillis(300);
+    }
+}
+
+//--------------------------------------------------------------
+void ofApp::readOrientationPacketWithHandshake() {
+    if (serial.available() > 0) {
+        int inByte = serial.readByte();
+        if (!firstContact) {
+            if (inByte == OF_SERIAL_ERROR) {
+                ofLog(OF_LOG_ERROR, "Unrecoverable error after reading from serial.");
+            } else if (inByte == FIRST_CONTACT_BYTE) {
+                serial.flush();
+                firstContact = true;
+                cout << "first contact" << endl;
+                serial.writeByte(REQUEST_PACKET_BYTE);
+            }
+        } else {
+            int bytesRequired = 12; // three 4-byte floats
+            unsigned char serialInArray[bytesRequired];
+            serialInArray[0] = inByte;
+            int bytesRemaining = bytesRequired - 1;
+            
+            memset(serialInArray, 0, bytesRequired + 1);
+            
+            // loop until we've read bytesRemaining bytes
+            while (bytesRemaining > 0) {
+                int serialInArrayOffset = bytesRequired - bytesRemaining;
+                int result = serial.readBytes(&serialInArray[serialInArrayOffset], bytesRemaining);
+                
+                if (result == OF_SERIAL_ERROR) {
+                    ofLog(OF_LOG_ERROR, "Unrecoverable error after reading from serial.");
+                    break;
+                } else if (result == OF_SERIAL_NO_DATA) {
+                    continue;
+                } else {
+                    bytesRemaining -= result;
+                }
+            }
+            
+            unsigned char * bytePtr = serialInArray;
+            
+            x = *(float *)bytePtr;
+            y = *(float *)(bytePtr + 4);
+            z = *(float *)(bytePtr + 8);
+            
+            readTime = ofGetElapsedTimef();
+            
+            cout << "x: " << x << ", y: " << y << ", z: " << z << endl;
+            cout << serial.available() << endl;
+            
+            serial.flush();
+            serial.writeByte(REQUEST_PACKET_BYTE);
+        }
+    }
 }
 
 //--------------------------------------------------------------

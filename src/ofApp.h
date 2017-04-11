@@ -2,6 +2,9 @@
 
 #include "ofMain.h"
 
+#define FIRST_CONTACT_BYTE 'a'
+#define REQUEST_PACKET_BYTE 'b'
+
 class ofApp : public ofBaseApp{
 
 	public:
@@ -21,6 +24,8 @@ class ofApp : public ofBaseApp{
 		void dragEvent(ofDragInfo dragInfo);
 		void gotMessage(ofMessage msg);
     
+        void establishSerialContact();
+        void readOrientationPacketWithHandshake();
         string ofxGetSerialString(ofSerial &serial, char until);
         string ofxTrimStringRight(string str);
         string ofxTrimStringLeft(string str);
@@ -29,7 +34,8 @@ class ofApp : public ofBaseApp{
         ofSerial	serial;
         float		readTime;					// when did we last read?
         string      serialString;
-    
+        bool firstContact;
+            
         float x;
         float y;
         float z;

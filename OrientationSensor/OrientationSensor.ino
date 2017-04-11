@@ -33,6 +33,8 @@
 
 Adafruit_BNO055 bno = Adafruit_BNO055(55);
 
+int inByte = 0;
+
 /**************************************************************************/
 /*
     Displays some basic information on this sensor from the unified
@@ -148,27 +150,44 @@ void setup(void)
 /**************************************************************************/
 void loop(void)
 {
-  /* Get a new sensor event */
-  sensors_event_t event;
-  bno.getEvent(&event);
+  if (Serial.available() > 0) {
+    inByte = Serial.read();
 
-  /* Display the floating point data */
-  Serial.print("X: ");
-  Serial.print(event.orientation.x, 4);
-  Serial.print("\tY: ");
-  Serial.print(event.orientation.y, 4);
-  Serial.print("\tZ: ");
-  Serial.print(event.orientation.z, 4);
-
-  /* Optional: Display calibration status */
-//  displayCalStatus();
-
-  /* Optional: Display sensor status (debug only) */
-  //displaySensorStatus();
-
-  /* New line for the next sample */
-  Serial.println("");
-
-  /* Wait the specified delay before requesting nex data */
-  delay(BNO055_SAMPLERATE_DELAY_MS);
+    if (inByte == 'a') {
+      Serial.write('b');
+      Serial.flush();
+    } else {        
+      /* Get a new sensor event */
+      sensors_event_t event;
+      bno.getEvent(&event);
+  
+      /* Display the floating point data */
+      serialWriteDouble(event.orientation.x);
+      serialWriteDouble(event.orientation.y);
+      serialWriteDouble(event.orientation.z);
+  
+      Serial.flush();
+  
+      /* Optional: Display calibration status */
+//      displayCalStatus();
+  
+      /* Optional: Display sensor status (debug only) */
+  //    displaySensorStatus();
+  
+      /* New line for the next sample */
+  //    Serial.println("");
+  
+      /* Wait the specified delay before requesting nex data */
+      delay(BNO055_SAMPLERATE_DELAY_MS);
+    }
+  }
 }
+
+void serialWriteDouble(double d) {
+  byte * b = (byte *) &d;
+  Serial.write(b[0]);
+  Serial.write(b[1]);
+  Serial.write(b[2]);
+  Serial.write(b[3]);
+}
+
