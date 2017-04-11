@@ -11,16 +11,24 @@ void ofApp::setup(){
     // arduino users check in arduino app....
     int baud = 9600;
     serial.setup("/dev/tty.usbmodem1421", baud);
-
-    serialString = "";
-//    
-//    for (int i = 0; i < 100; i++) {
-//        ofBoxPrimitive box;
-//        box.set(20);
-//        box.setPosition(ofRandom(0, ofGetWidth()), ofRandom(0, ofGetHeight()), ofRandom(-1000, 1000));
-//        boxes.push_back(box);
-//        colors.push_back(ofColor::fromHsb(ofRandom(0, 255), ofRandom(0, 255), ofRandom(0, 255)));
-//    }
+    
+    // generate n boxes at random points on the surface of a sphere centered at the origin
+    int sphereRadius = 1000;
+    for (int i = 0; i < 500; i++) {
+        float phi = ofRandom(0, TWO_PI);
+        float cosTheta = ofRandom(-1, 1);
+        float u = ofRandom(0, 1);
+        
+        float theta = acos(cosTheta);
+        float r = sphereRadius * cbrt(u);
+        
+        ofBoxPrimitive box;
+        box.set(20);
+        box.setPosition(r * sin(theta) * cos(phi), r * sin(theta) * sin(phi), r * cos(theta));
+        boxes.push_back(box);
+        colors.push_back(ofColor::fromHsb(ofRandom(0, 255), ofRandom(0, 255), ofRandom(0, 255)));
+    }
+    
     firstContact = false;
     serial.flush();
     establishSerialContact();
@@ -28,54 +36,46 @@ void ofApp::setup(){
 
 //--------------------------------------------------------------
 void ofApp::update(){
-//    serialString = "";
-//    serialString = ofxGetSerialString(serial,'\n'); //read until end of line
-//    if (serialString.length() > 0) {
-//        readTime = ofGetElapsedTimef();
-//        
-//        regex re("X: (.*)\tY: (.*)\tZ: (.*)");
-//        smatch match;
-//        if (regex_match(serialString, match, re) && match.size() > 1) {
-//            x = stof(match.str(1));
-//            y = stof(match.str(2));
-//            z = stof(match.str(3));
-//            cout << "x: " << match.str(1) << ", y: " << match.str(2) << ", z: " << match.str(3) << endl;
-//        }
-//    }
-    
     readOrientationPacketWithHandshake();
+    currentRotation = ofQuaternion(x, y, z, w);
+    
+//    currentRotation *= ofQuaternion(180, ofVec3f(0, 1, 0));
 }
 
 //--------------------------------------------------------------
 void ofApp::draw(){
-//    ofBackground(255);
-//    
-//    camera.begin();
-//    
-//    ofPushMatrix();
-//    
-//    ofTranslate(0, 0, 0);
-//    ofRotateX(ofMap(y, 0, 360, 0, 360) + ofMap(ofGetMouseX(), 0, ofGetWidth(), -360, 360));
-//    ofRotateY(ofMap(x, -80, 80, 0, 360) + ofMap(ofGetMouseY(), 0, ofGetHeight(), -360, 360));
-//    ofRotateZ(ofMap(z, -180, 180, 0, 360));
-//    
-//    ofSetColor(ofColor::black);
-//    for (int i = 0; i < boxes.size(); i++) {
-//        auto box = boxes[i];
-//        box.draw();
-//    }
-//    
-//    ofPopMatrix();
-//    
-//    camera.end();
+    ofBackground(255);
+    
+    ofVec3f axis;
+    float angle;
+    currentRotation.getRotate(angle, axis);
+    
+    camera.begin();
+    
+    ofPushMatrix();
+    
+    ofTranslate(0, 0, 0);
+    
+    ofRotate(angle, axis.x, axis.y, axis.z);
+    
+    ofSetColor(ofColor::black);
+    for (int i = 0; i < boxes.size(); i++) {
+        auto box = boxes[i];
+        box.draw();
+    }
+    
+    ofPopMatrix();
+    
+    camera.end();
 
-    int r = ofMap(x, 0, 360, 0, 255);
-    int g = ofMap(y, -80, 80, 0, 255);
-    int b = ofMap(z, -180, 180, 0, 255);
-    ofColor color(r, g, b);
-    ofBackground(color);
+//    int r = ofMap(x, 0, 360, 0, 255);
+//    int g = ofMap(y, -80, 80, 0, 255);
+//    int b = ofMap(z, -180, 180, 0, 255);
+//    ofColor color(r, g, b);
+//    ofBackground(color);
 }
 
+//--------------------------------------------------------------
 void ofApp::establishSerialContact() {
     serial.flush();
     while (serial.available() <= 0) {
@@ -99,7 +99,7 @@ void ofApp::readOrientationPacketWithHandshake() {
                 serial.writeByte(REQUEST_PACKET_BYTE);
             }
         } else {
-            int bytesRequired = 12; // three 4-byte floats
+            int bytesRequired = 16; // four 4-byte floats
             unsigned char serialInArray[bytesRequired];
             serialInArray[0] = inByte;
             int bytesRemaining = bytesRequired - 1;
@@ -123,57 +123,20 @@ void ofApp::readOrientationPacketWithHandshake() {
             
             unsigned char * bytePtr = serialInArray;
             
-            x = *(float *)bytePtr;
-            y = *(float *)(bytePtr + 4);
-            z = *(float *)(bytePtr + 8);
+            w = *(float *)bytePtr;
+            x = *(float *)(bytePtr + 4);
+            y = *(float *)(bytePtr + 8);
+            z = *(float *)(bytePtr + 12);
             
             readTime = ofGetElapsedTimef();
             
-            cout << "x: " << x << ", y: " << y << ", z: " << z << endl;
+            cout << "w: " << w << ", x: " << x << ", y: " << y << ", z: " << z << endl;
             cout << serial.available() << endl;
             
             serial.flush();
             serial.writeByte(REQUEST_PACKET_BYTE);
         }
     }
-}
-
-//--------------------------------------------------------------
-string ofApp::ofxGetSerialString(ofSerial &serial, char until) {
-    static string str;
-    stringstream ss;
-    char ch;
-    int ttl=1000;
-    while ((ch=serial.readByte())>0 && ttl-->0 && ch!=until) {
-        ss << ch;
-    }
-    str+=ss.str();
-    if (ch==until) {
-        string tmp=str;
-        str="";
-        return ofxTrimString(tmp);
-    } else {
-        return "";
-    }
-}
-
-//--------------------------------------------------------------
-// trim trailing spaces
-string ofApp::ofxTrimStringRight(string str) {
-    size_t endpos = str.find_last_not_of(" \t\r\n");
-    return (string::npos != endpos) ? str.substr( 0, endpos+1) : str;
-}
-
-//--------------------------------------------------------------
-// trim trailing spaces
-string ofApp::ofxTrimStringLeft(string str) {
-    size_t startpos = str.find_first_not_of(" \t\r\n");
-    return (string::npos != startpos) ? str.substr(startpos) : str;
-}
-
-//--------------------------------------------------------------
-string ofApp::ofxTrimString(string str) {
-    return ofxTrimStringLeft(ofxTrimStringRight(str));;
 }
 
 //--------------------------------------------------------------

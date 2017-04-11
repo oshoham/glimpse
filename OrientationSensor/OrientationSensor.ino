@@ -158,13 +158,15 @@ void loop(void)
       Serial.flush();
     } else {        
       /* Get a new sensor event */
-      sensors_event_t event;
-      bno.getEvent(&event);
+//      sensors_event_t event;
+//      bno.getEvent(&event);
+      imu::Quaternion quat = bno.getQuat();
   
       /* Display the floating point data */
-      serialWriteDouble(event.orientation.x);
-      serialWriteDouble(event.orientation.y);
-      serialWriteDouble(event.orientation.z);
+      serialWriteDouble(quat.w());
+      serialWriteDouble(quat.x());
+      serialWriteDouble(quat.y());
+      serialWriteDouble(quat.z());
   
       Serial.flush();
   

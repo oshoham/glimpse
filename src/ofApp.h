@@ -26,19 +26,16 @@ class ofApp : public ofBaseApp{
     
         void establishSerialContact();
         void readOrientationPacketWithHandshake();
-        string ofxGetSerialString(ofSerial &serial, char until);
-        string ofxTrimStringRight(string str);
-        string ofxTrimStringLeft(string str);
-        string ofxTrimString(string str);
 		
         ofSerial	serial;
         float		readTime;					// when did we last read?
-        string      serialString;
         bool firstContact;
-            
+    
+        float w;
         float x;
         float y;
         float z;
+        ofQuaternion currentRotation;
     
         ofCamera camera;
     
