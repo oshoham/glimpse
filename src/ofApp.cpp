@@ -37,42 +37,25 @@ void ofApp::setup(){
 //--------------------------------------------------------------
 void ofApp::update(){
     readOrientationPacketWithHandshake();
+    
     currentRotation = ofQuaternion(x, y, z, w);
     
-//    currentRotation *= ofQuaternion(180, ofVec3f(0, 1, 0));
+    camera.setOrientation(currentRotation);
 }
 
 //--------------------------------------------------------------
 void ofApp::draw(){
     ofBackground(255);
-    
-    ofVec3f axis;
-    float angle;
-    currentRotation.getRotate(angle, axis);
-    
+
     camera.begin();
-    
-    ofPushMatrix();
-    
-    ofTranslate(0, 0, 0);
-    
-    ofRotate(angle, axis.x, axis.y, axis.z);
-    
-    ofSetColor(ofColor::black);
+
     for (int i = 0; i < boxes.size(); i++) {
+        ofSetColor(colors[i]);
         auto box = boxes[i];
         box.draw();
     }
-    
-    ofPopMatrix();
-    
-    camera.end();
 
-//    int r = ofMap(x, 0, 360, 0, 255);
-//    int g = ofMap(y, -80, 80, 0, 255);
-//    int b = ofMap(z, -180, 180, 0, 255);
-//    ofColor color(r, g, b);
-//    ofBackground(color);
+    camera.end();
 }
 
 //--------------------------------------------------------------
@@ -131,7 +114,7 @@ void ofApp::readOrientationPacketWithHandshake() {
             readTime = ofGetElapsedTimef();
             
             cout << "w: " << w << ", x: " << x << ", y: " << y << ", z: " << z << endl;
-            cout << serial.available() << endl;
+//            cout << serial.available() << endl;
             
             serial.flush();
             serial.writeByte(REQUEST_PACKET_BYTE);

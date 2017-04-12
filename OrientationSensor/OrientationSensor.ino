@@ -140,6 +140,12 @@ void setup(void)
   displaySensorStatus();
 
   bno.setExtCrystalUse(true);
+//
+//  bno.setMode(Adafruit_BNO055::OPERATION_MODE_CONFIG);
+//  bno.write8(Adafruit_BNO055::BNO055_AXIS_MAP_CONFIG_ADDR, 0x21);
+//  bno.write8(Adafruit_BNO055::BNO055_AXIS_MAP_SIGN_ADDR, 0x04);
+//  delay(30);
+//  bno.setMode(Adafruit_BNO055::OPERATION_MODE_NDOF);
 }
 
 /**************************************************************************/
@@ -154,6 +160,9 @@ void loop(void)
     inByte = Serial.read();
 
     if (inByte == 'a') {
+      while (Serial.available() > 0) {
+        Serial.read();
+      }
       Serial.write('b');
       Serial.flush();
     } else {        
@@ -186,6 +195,7 @@ void loop(void)
 }
 
 void serialWriteDouble(double d) {
+  // on an Arduino Uno, a double is the same size as a float - 4 bytes
   byte * b = (byte *) &d;
   Serial.write(b[0]);
   Serial.write(b[1]);
