@@ -25,17 +25,11 @@ class ofApp : public ofBaseApp{
 		void gotMessage(ofMessage msg);
     
         void establishSerialContact();
-        void readOrientationPacketWithHandshake();
+        ofQuaternion readOrientationPacketWithHandshake();
 		
         ofSerial	serial;
         float		readTime;					// when did we last read?
         bool firstContact;
-    
-        float w;
-        float x;
-        float y;
-        float z;
-        ofQuaternion currentRotation;
     
         ofCamera camera;
     

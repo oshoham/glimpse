@@ -36,9 +36,14 @@ void ofApp::setup(){
 
 //--------------------------------------------------------------
 void ofApp::update(){
-    readOrientationPacketWithHandshake();
+    ofQuaternion currentRotation = readOrientationPacketWithHandshake();
     
-    currentRotation = ofQuaternion(x, y, z, w);
+    cout << "w: " << currentRotation.w() << ", x: " << currentRotation.x() << ", y: " << currentRotation.y() << ", z: " << currentRotation.z() << endl;
+        
+//    ofMatrix4x4 rotationMatrix = ofMatrix4x4::newRotationMatrix(currentRotation);
+//    rotationMatrix *= ofMatrix4x4::newScaleMatrix(-1, 1, 1);
+    
+//    currentRotation.set(rotationMatrix.getInverse());
     
     camera.setOrientation(currentRotation);
 }
@@ -69,7 +74,7 @@ void ofApp::establishSerialContact() {
 }
 
 //--------------------------------------------------------------
-void ofApp::readOrientationPacketWithHandshake() {
+ofQuaternion ofApp::readOrientationPacketWithHandshake() {
     if (serial.available() > 0) {
         int inByte = serial.readByte();
         if (!firstContact) {
@@ -106,18 +111,17 @@ void ofApp::readOrientationPacketWithHandshake() {
             
             unsigned char * bytePtr = serialInArray;
             
-            w = *(float *)bytePtr;
-            x = *(float *)(bytePtr + 4);
-            y = *(float *)(bytePtr + 8);
-            z = *(float *)(bytePtr + 12);
+            float w = *(float *)bytePtr;
+            float x = *(float *)(bytePtr + 4);
+            float y = *(float *)(bytePtr + 8);
+            float z = *(float *)(bytePtr + 12);
             
             readTime = ofGetElapsedTimef();
             
-            cout << "w: " << w << ", x: " << x << ", y: " << y << ", z: " << z << endl;
-//            cout << serial.available() << endl;
-            
             serial.flush();
             serial.writeByte(REQUEST_PACKET_BYTE);
+            
+            return ofQuaternion(x, y, z, w);
         }
     }
 }
